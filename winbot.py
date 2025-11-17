@@ -83,13 +83,13 @@ def mark_sent_today(user_id: int):
 # ---------------- КНОПКИ ----------------
 def kb_go():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🚀 Поїхали", callback_data="go")]
+        [InlineKeyboardButton(text="поїхали !", callback_data="go")]
     ])
 
 def kb_subscribe():
-    rows = [[InlineKeyboardButton(text="🔁 Перевірити підписку", callback_data="check_sub")]]
+    rows = [[InlineKeyboardButton(text="перевірити підписку 🔁", callback_data="check_sub")]]
     if CHANNEL_URL:
-        rows.append([InlineKeyboardButton(text="📣 Відкрити канал", url=CHANNEL_URL)])
+        rows.append([InlineKeyboardButton(text="відкрити канал 🔔", url=CHANNEL_URL)])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 def kb_get_message():
@@ -99,23 +99,23 @@ def kb_get_message():
 
 def kb_come_tomorrow():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🕊 Отримати ще (завтра)", callback_data="get_msg")]
+        [InlineKeyboardButton(text="отримати ще !", callback_data="get_msg")]
     ])
 
 # ---------------- ХЕНДЛЕРЫ ----------------
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     text = (
-        "Привіт! Це бот, де ти отримаєш послання саме для себе ✨\n"
-        "Готова/готовий розпочати?"
+        "привіт, моя люба душа! \n"
+        "це бот, в якому ти отримаєш послання від вищих сил коли дуже його потребуєш, коли чекаєш знак, коли не знаєш, що робити, готова? 🌬🤍"
     )
     await message.answer(text, reply_markup=kb_go())
 
 @dp.callback_query(F.data == "go")
 async def on_go(callback: types.CallbackQuery):
     text = (
-        "Щоб скористатися ботом — перевір свою підписку на канал.\n\n"
-        "Натисни кнопку нижче, підпишись і повернись сюди натиснути «Перевірити підписку»."
+        "а щоб скористатися ботом — перевір свою підписку на канал 🤍\n\n"
+        "натисни кнопку нижче, підпишись і повернись сюди натиснути «перевірити підписку» ✅"
         + ("\n\n(Кнопка «Відкрити канал» з’явиться, якщо додати посилання в CHANNEL_URL)" if not CHANNEL_URL else "")
     )
     await callback.message.answer(text, reply_markup=kb_subscribe())
@@ -129,12 +129,12 @@ async def on_check_sub(callback: types.CallbackQuery):
         status = getattr(member, "status", None)
         if status in ("member", "administrator", "creator"):
             await callback.message.answer(
-                "Дякую за підписку! Можеш отримати своє послання 🫶",
+                "дякую за підписку! можеш отримати своє послання прямо зараз 🫶🏻",
                 reply_markup=kb_get_message()
             )
         else:
             await callback.message.answer(
-                "Схоже, підписки ще немає. Підпишись і спробуй ще раз 😊",
+                "схоже, підписки ще немає, підпишись і спробуй ще раз 😊",
                 reply_markup=kb_subscribe()
             )
     except Exception as e:
@@ -151,8 +151,7 @@ async def on_get_msg(callback: types.CallbackQuery):
     # Лимит: 1 раз в день
     if not can_send_today(user_id):
         await callback.message.answer(
-            "Ти вже отримувала/отримував послання сьогодні 🌞\n"
-            "Повернись завтра — я чекатиму 🕊",
+            "ти вже отримав/ла послання, приходь завтра, щоб отримати наступне 💌\n",
             reply_markup=kb_come_tomorrow()
         )
         await callback.answer()
