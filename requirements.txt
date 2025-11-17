@@ -1,2 +1,2 @@
-python-telegram-bot
-requests
+aiogram==3.13.1
+python-dotenv==1.0.1
