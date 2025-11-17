@@ -15,7 +15,7 @@ from aiogram.filters import Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile
 
 # ================== КОНФІГ (твои данные) ==================
-BOT_TOKEN   = "8113214724:AAGEnVY3gSSlNuypmpmVjJD5DJCivfhLEr4"
+BOT_TOKEN   = os.getenv("TELEGRAM_TOKEN")  # <-- БЕРЁМ ИЗ ПЕРЕМЕННОЙ ОКРУЖЕНИЯ
 CHANNEL_ID  = -1001800748026                         # numeric id канала (надежно)
 CHANNEL_URL = "https://t.me/ezovinua"  # если есть публичная ссылка/инвайт — добавь сюда (например, https://t.me/your_channel)
 
