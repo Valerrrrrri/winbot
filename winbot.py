@@ -14,10 +14,12 @@ from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile
 
+from aiohttp import web  # <-- ДОДАЛИ ДЛЯ ВЕБ-СЕРВЕРА
+
 # ================== КОНФІГ (твои данные) ==================
-BOT_TOKEN   = os.getenv("TELEGRAM_TOKEN")  # <-- БЕРЁМ ИЗ ПЕРЕМЕННОЙ ОКРУЖЕНИЯ
-CHANNEL_ID  = -1001800748026                         # numeric id канала (надежно)
-CHANNEL_URL = "https://t.me/ezovinua"  # если есть публичная ссылка/инвайт — добавь сюда (например, https://t.me/your_channel)
+BOT_TOKEN   = os.getenv("TELEGRAM_TOKEN")  # <-- ВАЖЛИВО: токен только из env
+CHANNEL_ID  = -1001800748026               # numeric id канала
+CHANNEL_URL = "https://t.me/ezovinua"      # публичная ссылка на канал
 
 # Абсолютные пути — чтобы не было проблем с рабочей директорией
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -32,6 +34,9 @@ CAPTIONS = [
     "Прийми це послання з довірою. Відчуй, де воно відгукується в тобі ✨",
 ]
 # ===========================================================
+
+if not BOT_TOKEN:
+    raise RuntimeError("TELEGRAM_TOKEN не задан в переменных окружения!")
 
 bot = Bot(BOT_TOKEN)
 dp  = Dispatcher()
@@ -78,7 +83,7 @@ def mark_sent_today(user_id: int):
 # ---------------- КНОПКИ ----------------
 def kb_go():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="поїхали !", callback_data="go")]
+        [InlineKeyboardButton(text="🚀 Поїхали", callback_data="go")]
     ])
 
 def kb_subscribe():
@@ -89,28 +94,28 @@ def kb_subscribe():
 
 def kb_get_message():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="отримати послання🪽", callback_data="get_msg")]
+        [InlineKeyboardButton(text="🔮 Отримати послання", callback_data="get_msg")]
     ])
 
 def kb_come_tomorrow():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="отримати ще !", callback_data="get_msg")]
+        [InlineKeyboardButton(text="🕊 Отримати ще (завтра)", callback_data="get_msg")]
     ])
 
 # ---------------- ХЕНДЛЕРЫ ----------------
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     text = (
-        "привіт, моя люба душа!\n"
-        "це бот, в якому ти отримаєш послання від вищих сил коли дуже його потребуєш, коли чекаєш знак, коли не знаєш, що робити, готова? 🌬🤍"
+        "Привіт! Це бот, де ти отримаєш послання саме для себе ✨\n"
+        "Готова/готовий розпочати?"
     )
     await message.answer(text, reply_markup=kb_go())
 
 @dp.callback_query(F.data == "go")
 async def on_go(callback: types.CallbackQuery):
     text = (
-        "а щоб скористатися ботом — перевір свою підписку на канал 🤍\n\n"
-        "натисни кнопку нижче, підпишись і повернись сюди натиснути «перевірити підписку» ✅"
+        "Щоб скористатися ботом — перевір свою підписку на канал.\n\n"
+        "Натисни кнопку нижче, підпишись і повернись сюди натиснути «Перевірити підписку»."
         + ("\n\n(Кнопка «Відкрити канал» з’явиться, якщо додати посилання в CHANNEL_URL)" if not CHANNEL_URL else "")
     )
     await callback.message.answer(text, reply_markup=kb_subscribe())
@@ -124,7 +129,7 @@ async def on_check_sub(callback: types.CallbackQuery):
         status = getattr(member, "status", None)
         if status in ("member", "administrator", "creator"):
             await callback.message.answer(
-                "дякую за підписку! можеш отримати своє послання прямо зараз 🫶🏻",
+                "Дякую за підписку! Можеш отримати своє послання 🫶",
                 reply_markup=kb_get_message()
             )
         else:
@@ -146,7 +151,8 @@ async def on_get_msg(callback: types.CallbackQuery):
     # Лимит: 1 раз в день
     if not can_send_today(user_id):
         await callback.message.answer(
-            "ти вже отримав/ла послання, приходь завтра, щоб отримати наступне 💌\n",
+            "Ти вже отримувала/отримував послання сьогодні 🌞\n"
+            "Повернись завтра — я чекатиму 🕊",
             reply_markup=kb_come_tomorrow()
         )
         await callback.answer()
@@ -154,8 +160,8 @@ async def on_get_msg(callback: types.CallbackQuery):
 
     # Подводка
     await callback.message.answer(
-        "зараз ти отримаєш, що тобі варто почути прямо зараз, вищі сили завжди знають, що тобі потрібно, довірся 🤍\n"
-        "подумай, що це означає саме для тебе, на благо 🙏🏼\n"
+        "Зараз ти отримаєш те, що тобі варто почути… 💫\n"
+        "Подумай, чому саме ця картинка тобі потрапила сьогодні."
     )
 
     # Список фото (только jpg/jpeg/png)
@@ -181,12 +187,40 @@ async def on_get_msg(callback: types.CallbackQuery):
 
     await callback.answer()
 
+# ---------------- МАЛЕНЬКИЙ ВЕБ-СЕРВЕР ДЛЯ RENDER ----------------
+
+async def handle_root(request: web.Request) -> web.Response:
+    """
+    Простой handler для корня — чтобы Render видел открытый порт.
+    """
+    return web.Response(text="winbot is alive ✅")
+
+async def start_web_app():
+    """
+    Поднимаем aiohttp-сервер, который слушает порт из переменной PORT.
+    Это нужно только для Render (порт-скан), на работу бота не влияет.
+    """
+    app = web.Application()
+    app.router.add_get("/", handle_root)
+
+    port = int(os.getenv("PORT", 10000))  # Render задаёт PORT сам
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+    print(f"HTTP server запущено на порту {port}")
+
 # ---------------- ЗАПУСК ----------------
 async def main():
     init_db()
     await bot.delete_webhook(drop_pending_updates=True)
+
+    # Поднимаем веб-сервер для Render (порт), но он не мешает polling
+    await start_web_app()
+
     print(f"Бот запущено ✅ | Фото папка: {PHOTO_FOLDER}")
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
     asyncio.run(main())
+
