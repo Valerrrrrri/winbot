@@ -21,7 +21,7 @@ BOT_TOKEN   = os.getenv("TELEGRAM_TOKEN")  # <-- ВАЖЛИВО: токен то
 CHANNEL_ID  = -1001800748026               # numeric id канала
 CHANNEL_URL = "https://t.me/ezovinua"      # публичная ссылка на канал
 
-ADMIN_ID = 878454210  # <<< СЮДА ВСТАВЬ СВОЙ TELEGRAM ID
+ADMIN_ID = 938279264  # <<< СЮДА ВСТАВЬ СВОЙ TELEGRAM ID
 
 # Абсолютные пути — чтобы не было проблем с рабочей директорией
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
