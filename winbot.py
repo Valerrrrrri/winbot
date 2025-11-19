@@ -21,6 +21,8 @@ BOT_TOKEN   = os.getenv("TELEGRAM_TOKEN")  # <-- ВАЖЛИВО: токен то
 CHANNEL_ID  = -1001800748026               # numeric id канала
 CHANNEL_URL = "https://t.me/ezovinua"      # публичная ссылка на канал
 
+ADMIN_ID = 878454210  # <<< СЮДА ВСТАВЬ СВОЙ TELEGRAM ID
+
 # Абсолютные пути — чтобы не было проблем с рабочей директорией
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PHOTO_FOLDER = os.path.join(BASE_DIR, "photos")
@@ -186,23 +188,55 @@ async def on_get_msg(callback: types.CallbackQuery):
 
     await callback.answer()
 
+# ---------- СТАТИСТИКА /stats (тільки для ADMIN_ID) ----------
+@dp.message(Command("stats"))
+async def cmd_stats(message: types.Message):
+    # только владелец бота
+    if message.from_user.id != ADMIN_ID:
+        return
+
+    con = sqlite3.connect(DB_PATH)
+    cur = con.cursor()
+
+    # всего уникальных пользователей
+    cur.execute("SELECT COUNT(*) FROM users")
+    row = cur.fetchone()
+    total_users = row[0] if row and row[0] is not None else 0
+
+    # сколько получили послание сегодня
+    today_iso = date.today().isoformat()
+    cur.execute("SELECT COUNT(*) FROM users WHERE last_sent = ?", (today_iso,))
+    row = cur.fetchone()
+    today_users = row[0] if row and row[0] is not None else 0
+
+    con.close()
+
+    text = (
+        "📊 Статистика бота:\n"
+        f"👥 Унікальних користувачів (усі часи): {total_users}\n"
+        f"📆 Отримали послання сьогодні: {today_users}"
+    )
+
+    await message.answer(text)
+
 # ---------------- МАЛЕНЬКИЙ ВЕБ-СЕРВЕР ДЛЯ RENDER ----------------
 
 async def handle_root(request: web.Request) -> web.Response:
     """
     Простой handler для корня — чтобы Render видел открытый порт.
+    (На Hetzner не обязателен, но и не мешает.)
     """
     return web.Response(text="winbot is alive ✅")
 
 async def start_web_app():
     """
     Поднимаем aiohttp-сервер, который слушает порт из переменной PORT.
-    Это нужно только для Render (порт-скан), на работу бота не влияет.
+    Это нужно было для Render (порт-скан), на работу бота не влияет.
     """
     app = web.Application()
     app.router.add_get("/", handle_root)
 
-    port = int(os.getenv("PORT", 10000))  # Render задаёт PORT сам
+    port = int(os.getenv("PORT", 10000))
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, "0.0.0.0", port)
@@ -214,7 +248,7 @@ async def main():
     init_db()
     await bot.delete_webhook(drop_pending_updates=True)
 
-    # Поднимаем веб-сервер для Render (порт), но он не мешает polling
+    # веб-сервер можно убрать, но он не мешает
     await start_web_app()
 
     print(f"Бот запущено ✅ | Фото папка: {PHOTO_FOLDER}")
@@ -222,4 +256,5 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
 
